@@ -118,7 +118,12 @@ type Store = {
   weekStart: Date;
 };
 
-let store: Store | null = null;
+declare global {
+  // eslint-disable-next-line no-var
+  var __syncfit_mock_store: Store | undefined;
+}
+
+let store: Store | null = globalThis.__syncfit_mock_store ?? null;
 
 function buildStore(): Store {
   const weekStart = getWeekStart();
@@ -172,8 +177,46 @@ function buildStore(): Store {
 }
 
 export function getStore(): Store {
-  if (!store) store = buildStore();
+  if (!store) {
+    store = buildStore();
+    if (process.env.NODE_ENV !== "production") {
+      globalThis.__syncfit_mock_store = store;
+    }
+  }
   return store;
+}
+
+/**
+ * Dev-only: create or return a fresh non-onboarded user keyed by email.
+ * Used by /api/dev/signup when Supabase isn't configured.
+ */
+export function upsertDevUserByEmail(email: string, fullName: string | null): StoreUser {
+  const s = getStore();
+  const existing = Array.from(s.users.values()).find((u) => u.email === email);
+  if (existing) return existing;
+
+  const id = `dev-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+  const user: StoreUser = {
+    id,
+    email,
+    fullName,
+    phone: null,
+    avatarUrl: null,
+    homeNeighborhood: null,
+    workNeighborhood: null,
+    onboardedAt: null,
+    createdAt: new Date(),
+  };
+  s.users.set(id, user);
+  s.subscriptions.set(id, {
+    userId: id,
+    tier: "free",
+    status: null,
+    stripeCustomerId: null,
+    stripeSubscriptionId: null,
+    currentPeriodEnd: null,
+  });
+  return user;
 }
 
 // ─── Queries ─────────────────────────────────────────────────────────────

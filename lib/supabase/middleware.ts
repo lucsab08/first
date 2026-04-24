@@ -24,14 +24,22 @@ export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Prototype mode — Sofia is always signed-in and onboarded.
+  // Prototype mode — no Supabase env configured.
+  //
+  // If no sf_dev_user cookie is set we default to Sofia (fully onboarded demo
+  // user) so first-time visits to /today / /discover / etc. render populated
+  // screens. If the cookie IS set (because the user signed up via /signup),
+  // we leave it alone and let the app's own flow handle onboarding.
   if (!supabaseUrl || !supabaseKey) {
+    const existing = request.cookies.get("sf_dev_user");
     const res = NextResponse.next();
-    res.cookies.set("sf_dev_user", SOFIA_USER_ID, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-    });
+    if (!existing) {
+      res.cookies.set("sf_dev_user", SOFIA_USER_ID, {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+      });
+    }
     return res;
   }
 

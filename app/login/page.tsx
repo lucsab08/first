@@ -15,16 +15,31 @@ export default function LoginPage() {
   const toast = useToast();
   const router = useRouter();
 
-  async function handleMagicLink() {
+  async function handleSubmit() {
+    const trimmed = email.trim();
+    if (!trimmed.includes("@")) return;
+    setSending(true);
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
-      toast.show({ title: "Welcome back", tone: "success" });
-      router.push("/today");
+      const res = await fetch("/api/dev/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      setSending(false);
+      if (!res.ok) {
+        toast.show({ title: "Couldn't sign in", tone: "coral" });
+        return;
+      }
+      const data = (await res.json()) as { next: string; onboarded: boolean };
+      toast.show({ title: data.onboarded ? "Welcome back" : "Let's finish setting you up.", tone: "success" });
+      router.push(data.next);
+      router.refresh();
       return;
     }
-    setSending(true);
+
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: trimmed,
       options: { emailRedirectTo: `${window.location.origin}/callback` },
     });
     setSending(false);
@@ -51,14 +66,12 @@ export default function LoginPage() {
           inputMode="email"
           autoComplete="email"
         />
-        <Button
-          block
-          className="mt-3"
-          onClick={handleMagicLink}
-          disabled={!email.includes("@") || sending}
-        >
-          {sending ? "Sending…" : "Send me a link"}
+        <Button block className="mt-3" onClick={handleSubmit} disabled={!email.includes("@") || sending}>
+          {sending ? "Signing in…" : "Continue"}
         </Button>
+        <p className="text-xs text-ink-tertiary mt-3">
+          Dev build — no password. Any email lands you back at your account (or a fresh one).
+        </p>
       </main>
       <footer className="pt-4 pb-6 text-sm text-ink-tertiary">
         New here?{" "}

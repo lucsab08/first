@@ -1,0 +1,17 @@
+{
+  "name": "syncfit",
+  "short_name": "syncfit",
+  "description": "Miami moves in sync.",
+  "start_url": "/today",
+  "display": "standalone",
+  "background_color": "#FAFAF7",
+  "theme_color": "#1B3A4B",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ]
+}

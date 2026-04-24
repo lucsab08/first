@@ -1,0 +1,14 @@
+node_modules
+.next
+.env
+.env.local
+.env.production
+.vercel
+.turbo
+dist
+*.log
+.DS_Store
+coverage
+.idea
+.vscode
+.claude

@@ -11,6 +11,9 @@ const nextConfig = {
   experimental: {
     serverActions: { bodySizeLimit: "2mb" },
   },
+  // The mobile (Expo) project lives in /mobile and has its own toolchain.
+  // Next only compiles files it imports, so /mobile is naturally outside the
+  // graph. The /mobile path is also excluded from tsconfig.json's typecheck.
 };
 
 export default nextConfig;

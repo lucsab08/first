@@ -4,7 +4,11 @@ _Miami moves in sync._
 
 One app for Miami's boutique fitness community. Discover, book, and organize across every studio — with an AI coach that plans your week around your job, your goals, and your recovery.
 
-This repo is the v1 build, covering brand, frontend, backend, AI coach (with tool-use), payments, notifications, and iCal. It runs end-to-end with no external services configured — a deterministic in-memory store backs every route so the UI is instantly inspectable. Supply real env vars and the same code switches to Supabase / Stripe / Anthropic transparently.
+This repo holds two clients sharing one backend:
+- **Web v1** — Next.js 14 at the repo root. Marketing site, signup/auth, all 9 screens, AI Coach with tool-use, Stripe subscriptions, iCal feed, push reminders.
+- **Mobile (v4 + v4.1 patch)** — Expo / React Native iOS app at `mobile/`. Same backend via tRPC; payments split into Stripe + Apple Pay (class bookings) and StoreKit 2 (SyncFit+ subscription). See `mobile/README.md`.
+
+The web app runs end-to-end with no external services configured — a deterministic in-memory store backs every route so the UI is instantly inspectable. Supply real env vars and the same code switches to Supabase / Stripe / Anthropic transparently.
 
 ---
 

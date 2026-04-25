@@ -43,13 +43,32 @@ type StoreFavorite = {
   createdAt: Date;
 };
 
+type SubscriptionStatus =
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "trialing"
+  | "expired"
+  | "in_grace_period"
+  | "in_billing_retry"
+  | "revoked"
+  | null;
+
 type StoreSubscription = {
   userId: string;
   tier: "free" | "plus";
-  status: "active" | "past_due" | "canceled" | "trialing" | null;
+  status: SubscriptionStatus;
+  // Stripe (web SyncFit+ flow)
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   currentPeriodEnd: Date | null;
+  // Apple StoreKit (mobile SyncFit+ flow) — v4.1 §8.1
+  appleOriginalTransactionId: string | null;
+  appleProductId: string | null;
+  expiresAt: Date | null;
+  autoRenewStatus: boolean | null;
+  environment: "Sandbox" | "Production" | null;
+  lastVerifiedAt: Date | null;
 };
 
 type StoreUser = {
@@ -159,6 +178,12 @@ function buildStore(): Store {
     stripeCustomerId: null,
     stripeSubscriptionId: null,
     currentPeriodEnd: null,
+    appleOriginalTransactionId: null,
+    appleProductId: null,
+    expiresAt: null,
+    autoRenewStatus: null,
+    environment: null,
+    lastVerifiedAt: null,
   });
 
   return {
@@ -340,6 +365,12 @@ export function getSubscription(userId: string): StoreSubscription {
       stripeCustomerId: null,
       stripeSubscriptionId: null,
       currentPeriodEnd: null,
+      appleOriginalTransactionId: null,
+      appleProductId: null,
+      expiresAt: null,
+      autoRenewStatus: null,
+      environment: null,
+      lastVerifiedAt: null,
     }
   );
 }
@@ -348,6 +379,24 @@ export function setSubscription(userId: string, patch: Partial<StoreSubscription
   const s = getStore();
   const existing = getSubscription(userId);
   s.subscriptions.set(userId, { ...existing, ...patch, userId });
+}
+
+/**
+ * Update a subscription identified by Apple's originalTransactionId.
+ * Used by /api/storekit/notifications when Apple pushes lifecycle events.
+ */
+export function setSubscriptionByAppleOriginalId(
+  appleOriginalTransactionId: string,
+  patch: Partial<StoreSubscription>,
+): boolean {
+  const s = getStore();
+  for (const [userId, sub] of s.subscriptions) {
+    if (sub.appleOriginalTransactionId === appleOriginalTransactionId) {
+      s.subscriptions.set(userId, { ...sub, ...patch, userId });
+      return true;
+    }
+  }
+  return false;
 }
 
 // ─── Bookings ───────────────────────────────────────────────────────────

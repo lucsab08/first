@@ -63,7 +63,14 @@ export const subscriptionStatusEnum = pgEnum("subscription_status", [
   "past_due",
   "canceled",
   "trialing",
+  // Apple StoreKit lifecycle states (v4.1 patch §8.1)
+  "expired",
+  "in_grace_period",
+  "in_billing_retry",
+  "revoked",
 ]);
+
+export const appleEnvironmentEnum = pgEnum("apple_environment", ["Sandbox", "Production"]);
 
 // ─── Users & Preferences ─────────────────────────────────────────────────
 
@@ -289,9 +296,17 @@ export const subscriptions = pgTable("subscriptions", {
     .references(() => users.id, { onDelete: "cascade" }),
   tier: subscriptionTierEnum("tier").notNull().default("free"),
   status: subscriptionStatusEnum("status"),
+  // Stripe — used by web SyncFit+ subscriptions only (mobile uses StoreKit).
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  // Apple StoreKit (v4.1 patch §8.1) — populated by mobile via /api/storekit/verify
+  appleOriginalTransactionId: text("apple_original_transaction_id"),
+  appleProductId: text("apple_product_id"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  autoRenewStatus: boolean("auto_renew_status"),
+  environment: appleEnvironmentEnum("environment"),
+  lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

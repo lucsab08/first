@@ -1,6 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
+  content: [
+    "./App.js",
+    "./app/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}",
+  ],
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
@@ -19,18 +23,6 @@ module.exports = {
         sand: "#E8DFD0",
         coral: "#E87B5F",
         hairline: "#ECEAE4",
-      },
-      fontFamily: {
-        display: ["Fraunces_600SemiBold"],
-        displayItalic: ["Fraunces_600SemiBold_Italic"],
-        sans: ["Inter_400Regular"],
-        sansMedium: ["Inter_500Medium"],
-        sansSemibold: ["Inter_600SemiBold"],
-      },
-      borderRadius: {
-        xl: "12px",
-        "2xl": "16px",
-        "3xl": "24px",
       },
     },
   },

@@ -421,7 +421,11 @@ export function upcomingBookingsForUser(userId: string): StoreBooking[] {
     });
 }
 
-export function createBooking(userId: string, sessionId: string): StoreBooking {
+export function createBooking(
+  userId: string,
+  sessionId: string,
+  paymentIntentId?: string | null,
+): StoreBooking {
   const s = getStore();
   const id = `b-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   const session = getSessionById(sessionId);
@@ -434,7 +438,7 @@ export function createBooking(userId: string, sessionId: string): StoreBooking {
     status: full ? "waitlisted" : "confirmed",
     bookedAt: new Date(),
     cancelledAt: null,
-    paymentIntentId: null,
+    paymentIntentId: paymentIntentId ?? null,
     reminder90Sent: false,
     reminder30Sent: false,
   };

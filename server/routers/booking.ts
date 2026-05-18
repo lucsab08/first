@@ -29,9 +29,14 @@ export const bookingRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure
-    .input(z.object({ sessionId: z.string() }))
+    .input(
+      z.object({
+        sessionId: z.string(),
+        paymentIntentId: z.string().optional(),
+      }),
+    )
     .mutation(({ ctx, input }) => {
-      return createBooking(ctx.user.id, input.sessionId);
+      return createBooking(ctx.user.id, input.sessionId, input.paymentIntentId);
     }),
 
   cancel: protectedProcedure

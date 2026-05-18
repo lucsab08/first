@@ -23,6 +23,7 @@ export default function StudioPage({ params }: { params: { slug: string } }) {
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const [bookSessionId, setBookSessionId] = useState<string | null>(null);
+  const [stripeBookSessionId, setStripeBookSessionId] = useState<string | null>(null);
 
   const favoritedIds = useMemo(
     () => new Set((savedQ.data ?? []).map((s) => s.id)),
@@ -180,7 +181,16 @@ export default function StudioPage({ params }: { params: { slug: string } }) {
                     </p>
                   </div>
                   <div className="text-sm tabular text-ink-tertiary">{formatCents(cls?.priceCents ?? 0)}</div>
-                  <Button size="sm" onClick={() => setBookSessionId(s.id)}>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (remaining === 0) {
+                        setBookSessionId(s.id);
+                      } else {
+                        setStripeBookSessionId(s.id);
+                      }
+                    }}
+                  >
                     {remaining === 0 ? "Waitlist" : "Book"}
                   </Button>
                 </div>
@@ -280,6 +290,15 @@ export default function StudioPage({ params }: { params: { slug: string } }) {
           sessionId={bookSessionId}
           open={Boolean(bookSessionId)}
           onClose={() => setBookSessionId(null)}
+        />
+      ) : null}
+
+      {stripeBookSessionId ? (
+        <BookingSheet
+          sessionId={stripeBookSessionId}
+          open={Boolean(stripeBookSessionId)}
+          checkoutMode="stripe"
+          onClose={() => setStripeBookSessionId(null)}
         />
       ) : null}
     </motion.div>

@@ -13,11 +13,13 @@ export function ConflictSheet({
   onClose,
   newSessionId,
   onResolved,
+  paymentIntentId,
 }: {
   open: boolean;
   onClose: () => void;
   newSessionId: string;
   onResolved: () => void;
+  paymentIntentId?: string | null;
 }) {
   const session = trpc.class.sessionById.useQuery(
     { id: newSessionId },
@@ -39,7 +41,10 @@ export function ConflictSheet({
   async function cancelAndConfirm() {
     if (!existing) return;
     await cancelBooking.mutateAsync({ bookingId: existing.id });
-    await createBooking.mutateAsync({ sessionId: newSessionId });
+    await createBooking.mutateAsync({
+      sessionId: newSessionId,
+      paymentIntentId: paymentIntentId ?? undefined,
+    });
     await Promise.all([
       utils.booking.upcoming.invalidate(),
       utils.calendar.upcomingToday.invalidate(),
@@ -51,7 +56,10 @@ export function ConflictSheet({
   }
 
   async function keepBoth() {
-    await createBooking.mutateAsync({ sessionId: newSessionId });
+    await createBooking.mutateAsync({
+      sessionId: newSessionId,
+      paymentIntentId: paymentIntentId ?? undefined,
+    });
     await utils.booking.upcoming.invalidate();
     toast.show({ title: "Both booked — tight schedule that day." });
     onResolved();

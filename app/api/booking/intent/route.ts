@@ -50,7 +50,11 @@ export async function POST(request: Request) {
       },
       description: `${cls.name} — SyncFit booking`,
     });
-    return NextResponse.json({ clientSecret: pi.client_secret, amount: cls.priceCents });
+    return NextResponse.json({
+      clientSecret: pi.client_secret,
+      paymentIntentId: pi.id,
+      amount: cls.priceCents,
+    });
   } catch (err) {
     return NextResponse.json(
       { error: "STRIPE_ERROR", message: err instanceof Error ? err.message : "" },

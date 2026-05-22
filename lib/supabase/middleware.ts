@@ -70,7 +70,7 @@ export async function updateSession(request: NextRequest) {
 
   if (!user) {
     if (!isAuthRoute && !isPublic) {
-      const redirectUrl = url.clone();
+      const redirectUrl = new URL(request.nextUrl);
       redirectUrl.pathname = "/";
       return NextResponse.redirect(redirectUrl);
     }
@@ -81,13 +81,13 @@ export async function updateSession(request: NextRequest) {
   const onboarded = Boolean(user.user_metadata?.onboarded_at);
 
   if (!onboarded && !isOnboarding && !isAuthRoute) {
-    const redirectUrl = url.clone();
+    const redirectUrl = new URL(request.nextUrl);
     redirectUrl.pathname = "/onboarding/1";
     return NextResponse.redirect(redirectUrl);
   }
 
   if (onboarded && (isOnboarding || pathname === "/" || isAuthRoute)) {
-    const redirectUrl = url.clone();
+    const redirectUrl = new URL(request.nextUrl);
     redirectUrl.pathname = APP_HOME;
     return NextResponse.redirect(redirectUrl);
   }

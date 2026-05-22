@@ -7,16 +7,6 @@ const ONBOARDING_ROUTE_PREFIX = "/onboarding";
 const PUBLIC_ROUTES = ["/", "/pricing", "/studio-preview"];
 const APP_HOME = "/today";
 
-/**
- * Auth middleware — §8.5 step 6.
- *
- * Behavior:
- *  - Unauthed requests to protected routes → redirect to "/".
- *  - Authed but not onboarded → redirect to /onboarding/1.
- *  - Onboarded user visiting /onboarding/* or "/" → redirect to /today.
- *  - If Supabase env is missing (local UI-only dev), we fall through as the
- *    prototype user Sofia (pre-onboarded). Every screen remains reachable.
- */
 export async function updateSession(request: NextRequest) {
   const url = new URL(request.url);
   const pathname = url.pathname;
@@ -25,11 +15,6 @@ export async function updateSession(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   // Prototype mode — no Supabase env configured.
-  //
-  // If no sf_dev_user cookie is set we default to Sofia (fully onboarded demo
-  // user) so first-time visits to /today / /discover / etc. render populated
-  // screens. If the cookie IS set (because the user signed up via /signup),
-  // we leave it alone and let the app's own flow handle onboarding.
   if (!supabaseUrl || !supabaseKey) {
     const existing = request.cookies.get("sf_dev_user");
     const res = NextResponse.next();
@@ -70,24 +55,23 @@ export async function updateSession(request: NextRequest) {
 
   if (!user) {
     if (!isAuthRoute && !isPublic) {
-      const redirectUrl = url.clone();
+      const redirectUrl = new URL(request.nextUrl);
       redirectUrl.pathname = "/";
       return NextResponse.redirect(redirectUrl);
     }
     return response;
   }
 
-  // Check onboarded state — simple metadata check first.
   const onboarded = Boolean(user.user_metadata?.onboarded_at);
 
   if (!onboarded && !isOnboarding && !isAuthRoute) {
-    const redirectUrl = url.clone();
+    const redirectUrl = new URL(request.nextUrl);
     redirectUrl.pathname = "/onboarding/1";
     return NextResponse.redirect(redirectUrl);
   }
 
   if (onboarded && (isOnboarding || pathname === "/" || isAuthRoute)) {
-    const redirectUrl = url.clone();
+    const redirectUrl = new URL(request.nextUrl);
     redirectUrl.pathname = APP_HOME;
     return NextResponse.redirect(redirectUrl);
   }

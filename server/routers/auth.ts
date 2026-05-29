@@ -1,11 +1,16 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/trpc";
+import { isDatabaseConnected } from "@/server/db/client";
 import {
   getUser,
   getPreferences,
   upsertPreferences,
   markOnboarded,
 } from "@/server/db/mock";
+import {
+  persistOnboardingPreferences,
+  finalizeOnboardingForUser,
+} from "@/server/services/onboarding";
 
 const preferencesSchema = z.object({
   goals: z.array(z.string()).min(1).max(3),
@@ -18,6 +23,20 @@ const preferencesSchema = z.object({
   unavailableDays: z.array(z.number().int().min(0).max(6)),
   injuries: z.string().max(200).nullable().optional(),
 });
+
+function toPreferencesPayload(preferences: z.infer<typeof preferencesSchema>) {
+  return {
+    goals: preferences.goals,
+    workoutTypes: preferences.workoutTypes,
+    neighborhoods: preferences.neighborhoods,
+    experienceLevel: preferences.experienceLevel,
+    weeklyGoal: preferences.weeklyGoal,
+    unavailableStart: preferences.unavailableStart,
+    unavailableEnd: preferences.unavailableEnd,
+    unavailableDays: preferences.unavailableDays,
+    injuries: preferences.injuries ?? null,
+  };
+}
 
 export const authRouter = createTRPCRouter({
   me: publicProcedure.query(({ ctx }) => {
@@ -37,20 +56,32 @@ export const authRouter = createTRPCRouter({
   }),
 
   completeOnboarding: protectedProcedure
-    .input(z.object({ preferences: preferencesSchema }))
-    .mutation(({ ctx, input }) => {
-      upsertPreferences(ctx.user.id, {
-        goals: input.preferences.goals,
-        workoutTypes: input.preferences.workoutTypes,
-        neighborhoods: input.preferences.neighborhoods,
-        experienceLevel: input.preferences.experienceLevel,
-        weeklyGoal: input.preferences.weeklyGoal,
-        unavailableStart: input.preferences.unavailableStart,
-        unavailableEnd: input.preferences.unavailableEnd,
-        unavailableDays: input.preferences.unavailableDays,
-        injuries: input.preferences.injuries ?? null,
-      });
-      markOnboarded(ctx.user.id);
+    .input(
+      z.object({
+        preferences: preferencesSchema,
+        finalize: z.boolean().optional().default(false),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const preferences = toPreferencesPayload(input.preferences);
+
+      if (!isDatabaseConnected) {
+        console.warn(
+          "[onboarding] DATABASE_URL not detected, falling back to mock storage — preferences will NOT persist.",
+        );
+        upsertPreferences(ctx.user.id, preferences);
+        if (input.finalize) {
+          markOnboarded(ctx.user.id);
+        }
+        return { ok: true };
+      }
+
+      await persistOnboardingPreferences(ctx.user, preferences);
+
+      if (input.finalize) {
+        await finalizeOnboardingForUser(ctx.user);
+      }
+
       return { ok: true };
     }),
 });

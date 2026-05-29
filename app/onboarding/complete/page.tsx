@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/components/ui/toast";
 import { useOnboarding } from "@/lib/stores/onboarding";
 import { trpc } from "@/lib/trpc/client";
 import { neighborhoodLabel, firstName } from "@/lib/utils";
@@ -10,7 +11,14 @@ import { GOALS } from "@/lib/constants";
 
 export default function OnboardingComplete() {
   const state = useOnboarding();
+  const router = useRouter();
+  const toast = useToast();
   const me = trpc.auth.me.useQuery();
+
+  const completeOnboarding = trpc.auth.completeOnboarding.useMutation({
+    onError: (err) =>
+      toast.show({ title: "Something went wrong", description: err.message, tone: "coral" }),
+  });
 
   const name = firstName(me.data?.fullName ?? null);
   const goalLabels = state.goals
@@ -18,13 +26,32 @@ export default function OnboardingComplete() {
     .filter(Boolean)
     .join(", ");
 
+  async function handleFinish() {
+    await completeOnboarding.mutateAsync({
+      finalize: true,
+      preferences: {
+        goals: state.goals,
+        workoutTypes: state.workoutTypes,
+        neighborhoods: state.neighborhoods,
+        experienceLevel: state.experienceLevel,
+        weeklyGoal: state.weeklyGoal,
+        unavailableStart: state.unavailableStart,
+        unavailableEnd: state.unavailableEnd,
+        unavailableDays: state.unavailableDays,
+        injuries: state.injuries || null,
+      },
+    });
+    router.push("/today");
+    router.refresh();
+  }
+
   return (
     <div className="flex-1 flex flex-col px-5 pt-12 pb-8 safe-top safe-bottom">
       <h1 className="font-display text-[32px] font-semibold leading-[1.1]">
-        You're in, {name}.
+        You&apos;re in, {name}.
       </h1>
       <p className="mt-2 text-ink-secondary">
-        Here's what we've got. You can tweak any of it later under You → Preferences.
+        Here&apos;s what we&apos;ve got. You can tweak any of it later under You → Preferences.
       </p>
 
       <div className="mt-6 space-y-3">
@@ -50,8 +77,8 @@ export default function OnboardingComplete() {
 
       <div className="flex-1" />
 
-      <Button block asChild>
-        <Link href="/today">Let&apos;s find your week</Link>
+      <Button block disabled={completeOnboarding.isPending} onClick={handleFinish}>
+        {completeOnboarding.isPending ? "Saving…" : "Let's find your week"}
       </Button>
     </div>
   );

@@ -1,22 +1,58 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useOnboarding } from "@/lib/stores/onboarding";
 import { trpc } from "@/lib/trpc/client";
 import { neighborhoodLabel, firstName } from "@/lib/utils";
 import { GOALS } from "@/lib/constants";
+import { useToast } from "@/components/ui/toast";
 
 export default function OnboardingComplete() {
   const state = useOnboarding();
   const me = trpc.auth.me.useQuery();
+  const router = useRouter();
+  const toast = useToast();
+
+  const complete = trpc.auth.completeOnboarding.useMutation({
+    onError: (err) => {
+      toast.show({
+        title: "Couldn't finish onboarding",
+        description: err.message,
+        tone: "coral",
+      });
+    },
+  });
 
   const name = firstName(me.data?.fullName ?? null);
   const goalLabels = state.goals
     .map((g) => GOALS.find((x) => x.id === g)?.label)
     .filter(Boolean)
     .join(", ");
+
+  async function handleFinish() {
+    try {
+      await complete.mutateAsync({
+        finalize: true,
+        preferences: {
+          goals: state.goals,
+          workoutTypes: state.workoutTypes,
+          neighborhoods: state.neighborhoods,
+          experienceLevel: state.experienceLevel,
+          weeklyGoal: state.weeklyGoal,
+          unavailableStart: state.unavailableStart,
+          unavailableEnd: state.unavailableEnd,
+          unavailableDays: state.unavailableDays,
+          injuries: state.injuries || null,
+        },
+      });
+      router.push("/today");
+      router.refresh();
+    } catch {
+      // toast already shown by onError
+    }
+  }
 
   return (
     <div className="flex-1 flex flex-col px-5 pt-12 pb-8 safe-top safe-bottom">
@@ -50,8 +86,12 @@ export default function OnboardingComplete() {
 
       <div className="flex-1" />
 
-      <Button block asChild>
-        <Link href="/today">Let&apos;s find your week</Link>
+      <Button
+        block
+        onClick={handleFinish}
+        disabled={complete.isPending}
+      >
+        {complete.isPending ? "Saving…" : "Let's find your week"}
       </Button>
     </div>
   );

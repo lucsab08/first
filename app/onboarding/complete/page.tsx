@@ -1,22 +1,48 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useOnboarding } from "@/lib/stores/onboarding";
 import { trpc } from "@/lib/trpc/client";
 import { neighborhoodLabel, firstName } from "@/lib/utils";
 import { GOALS } from "@/lib/constants";
+import { useToast } from "@/components/ui/toast";
 
 export default function OnboardingComplete() {
+  const router = useRouter();
   const state = useOnboarding();
+  const toast = useToast();
   const me = trpc.auth.me.useQuery();
+
+  const completeOnboarding = trpc.auth.completeOnboarding.useMutation({
+    onSuccess: () => router.push("/today"),
+    onError: (err) =>
+      toast.show({ title: "Something went wrong", description: err.message, tone: "coral" }),
+  });
 
   const name = firstName(me.data?.fullName ?? null);
   const goalLabels = state.goals
     .map((g) => GOALS.find((x) => x.id === g)?.label)
     .filter(Boolean)
     .join(", ");
+
+  async function handleContinue() {
+    await completeOnboarding.mutateAsync({
+      finalize: true,
+      preferences: {
+        goals: state.goals,
+        workoutTypes: state.workoutTypes,
+        neighborhoods: state.neighborhoods,
+        experienceLevel: state.experienceLevel,
+        weeklyGoal: state.weeklyGoal,
+        unavailableStart: state.unavailableStart,
+        unavailableEnd: state.unavailableEnd,
+        unavailableDays: state.unavailableDays,
+        injuries: state.injuries || null,
+      },
+    });
+  }
 
   return (
     <div className="flex-1 flex flex-col px-5 pt-12 pb-8 safe-top safe-bottom">
@@ -50,8 +76,12 @@ export default function OnboardingComplete() {
 
       <div className="flex-1" />
 
-      <Button block asChild>
-        <Link href="/today">Let&apos;s find your week</Link>
+      <Button
+        block
+        onClick={handleContinue}
+        disabled={completeOnboarding.isPending}
+      >
+        {completeOnboarding.isPending ? "Saving…" : "Let's find your week"}
       </Button>
     </div>
   );
